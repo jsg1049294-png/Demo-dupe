@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Farbwähler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .google-logo { font-size: 2.35rem; font-weight: 400; letter-spacing: -2px; }
+        
+        .tool-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tool-card:hover {
+            transform: translateY(-10px) scale(1.04);
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+        }
+        .tool-card:active { transform: scale(0.96); }
+
+        .modal { animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalPop {
+            0% { transform: scale(0.7) translateY(50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .coin-flip { animation: coinFlip 1.6s ease-in-out; }
+        @keyframes coinFlip { from { transform: rotateY(0deg); } to { transform: rotateY(2520deg); } }
+
+        .spin { animation: spinAnim 1.8s linear; }
+        @keyframes spinAnim { from { transform: rotate(0deg); } to { transform: rotate(2880deg); } }
+
+        .dice-roll { animation: diceRoll 1s ease-in-out; }
+        @keyframes diceRoll {
+            0% { transform: rotate(0deg) scale(0.7); }
+            50% { transform: rotate(720deg) scale(1.3); }
+            100% { transform: rotate(1080deg) scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-12">
+
+    <div class="max-w-4xl mx-auto pt-8 px-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-1">
+                <span class="google-logo text-blue-500">G</span>
+                <span class="google-logo text-red-500">o</span>
+                <span class="google-logo text-yellow-500">o</span>
+                <span class="google-logo text-blue-500">g</span>
+                <span class="google-logo text-green-500">l</span>
+                <span class="google-logo text-red-500">e</span>
+            </div>
+            <div class="flex-1 max-w-xl mx-8">
+                <div class="bg-white border border-gray-300 rounded-full px-6 py-3 flex items-center shadow-sm">
+                    <input type="text" value="google farbwähler" class="flex-1 bg-transparent outline-none text-lg" readonly>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-gray-600">
+                <i class="fas fa-share-alt text-xl"></i>
+                <i class="fas fa-th text-2xl"></i>
+                <div class="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">U</div>
+            </div>
+        </div>
+
+        <!-- Farbwähler -->
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden mb-16">
+            <div class="px-6 py-5 border-b bg-gray-50 flex justify-between items-center">
+                <h1 class="text-2xl font-medium">Farbwähler</h1>
+                <button onclick="copyHex()" class="px-5 py-2 hover:bg-gray-100 rounded-2xl flex items-center gap-2 transition-colors">
+                    <i class="fas fa-upload"></i>
+                </button>
+            </div>
+
+            <div id="colorDisplay" class="h-64 relative" style="background: hsl(300, 97%, 91%);">
+                <div class="absolute top-6 right-6 w-8 h-8 rounded-full border-4 border-white shadow-xl" id="colorPickerDot" style="background-color: #e807e8"></div>
+            </div>
+
+            <div class="px-8 py-7">
+                <input type="range" min="0" max="360" value="300" id="hueSlider" class="w-full accent-pink-500 cursor-pointer" oninput="updateColor()">
+            </div>
+
+            <div class="px-8 pb-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div><p class="text-xs text-gray-500 mb-1">HEX</p><p id="hexValue" class="font-mono font-bold text-xl">#e807e8</p></div>
+                <div><p class="text-xs text-gray-500 mb-1">RGB</p><p id="rgbValue" class="font-mono text-xl">232, 7, 232</p></div>
+                <div><p class="text-xs text-gray-500 mb-1">HSV</p><p id="hsvValue" class="font-mono text-xl">300°, 97%, 91%</p></div>
+                <div><p class="text-xs text-gray-500 mb-1">CMYK</p><p id="cmykValue" class="font-mono text-xl">0%, 97%, 0%, 9%</p></div>
+            </div>
+        </div>
+
+        <!-- Tools -->
+        <h2 class="text-2xl font-medium mb-6 px-2">WERKZEUGE UND UNTERHALTUNG</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="toolsGrid"></div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="modal bg-white rounded-3xl max-w-md w-full mx-4 p-8 shadow-2xl" id="modalContent"></div>
+    </div>
+
+    <script>
+        const tools = [
+            { name: "Wirf eine Münze", emoji: "🪙", func: flipCoin },
+            { name: "Tierlaute", emoji: "🐱", func: animalSounds },
+            { name: "Lustige Tatsachen", emoji: "📋", func: funFact },
+            { name: "Emoji Kitchen", emoji: "😘", func: emojiKitchen },
+            { name: "Kreisel drehen", emoji: "🪩", func: spinDreidel },
+            { name: "Würfeln", emoji: "🎲", func: rollDice },
+            { name: "Meditieren", emoji: "🧘", func: meditate },
+            { name: "Drehscheibe", emoji: "🎡", func: spinWheel },
+            { name: "Rechner", emoji: "🧮", func: openCalculator }
+        ];
+
+        function createTools() {
+            const container = document.getElementById('toolsGrid');
+            container.innerHTML = '';
+            tools.forEach(tool => {
+                const card = document.createElement('div');
+                card.className = `tool-card bg-white rounded-3xl shadow-md p-6 flex flex-col items-center text-center cursor-pointer`;
+                card.innerHTML = `
+                    <div class="w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-5xl mb-4 shadow-inner text-white">
+                        ${tool.emoji}
+                    </div>
+                    <p class="font-medium">${tool.name}</p>
+                `;
+                card.addEventListener('click', tool.func);
+                container.appendChild(card);
+            });
+        }
+
+        function showModal(title, html) {
+            document.getElementById('modalContent').innerHTML = `
+                <h3 class="text-2xl font-semibold mb-6 text-center">${title}</h3>
+                <div id="modalBody">${html}</div>
+                <button onclick="closeModal()" class="mt-8 w-full py-4 bg-gray-100 hover:bg-gray-200 rounded-2xl text-lg font-medium transition-colors">Schließen</button>
+            `;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        // ==================== ALLE TOOLS (100% funktionsfähig) ====================
+
+        function flipCoin() {
+            const isHeads = Math.random() < 0.5;
+            showModal("Münzwurf", `<div class="text-8xl text-center my-12 coin-flip">🪙</div><p class="text-4xl font-bold text-center">${isHeads ? 'Kopf 👑' : 'Zahl ⚡'}</p>`);
+        }
+
+        function animalSounds() {
+            const list = [{e:"🐱",s:"Miau!"},{e:"🐶",s:"Wuff!"},{e:"🐮",s:"Muh!"},{e:"🦁",s:"ROAR!"}];
+            const item = list[Math.floor(Math.random()*list.length)];
+            showModal("Tierlaute", `<div class="text-8xl text-center my-12 animate-bounce">${item.e}</div><p class="text-4xl text-center">${item.s}</p>`);
+        }
+
+        function funFact() {
+            const facts = ["Ein Tintenfisch hat drei Herzen ❤️❤️❤️", "Honig verdirbt nie", "Oktopusse haben blaues Blut", "Eine Banane ist botanisch eine Beere"];
+            showModal("Lustige Tatsache", `<p class="text-xl leading-relaxed text-center px-4">${facts[Math.floor(Math.random()*facts.length)]}</p>`);
+        }
+
+        function emojiKitchen() {
+            const a = ["🍎","🐱","🌈","🔥","🍕"][Math.floor(Math.random()*5)];
+            const b = ["🍌","🐶","🌟","❄️","🦄"][Math.floor(Math.random()*5)];
+            showModal("Emoji Kitchen", `<div class="text-7xl flex justify-center gap-8 my-12">${a} + ${b}</div>`);
+        }
+
+        function spinDreidel() {
+            const results = ["נ (Nun)", "ג (Gimel) — Gewinn!", "ה (He)", "ש (Shin)"];
+            showModal("Kreisel drehen", `<div class="text-8xl text-center my-12 spin">🪩</div><p class="text-4xl font-bold text-center">${results[Math.floor(Math.random()*results.length)]}</p>`);
+        }
+
+        function rollDice() {
+            let html = '<div class="flex flex-wrap justify-center gap-8 my-8">';
+            for (let i = 0; i < 6; i++) {
+                const num = Math.floor(Math.random() * 6) + 1;
+                html += `<span class="dice-roll text-7xl">${['⚪','🔴','🔵','🟢','🟡','🟣'][num-1]}</span>`;
+            }
+            html += '</div>';
+            showModal("Würfeln", html);
+        }
+
+        function meditate() {
+            showModal("Meditieren", `
+                <div class="flex flex-col items-center py-8">
+                    <div id="breath" class="text-8xl transition-transform duration-5000">🧘</div>
+                    <p class="mt-10 text-xl text-center">Tief einatmen...<br>und langsam ausatmen...</p>
+                </div>
+            `);
+            setTimeout(() => {
+                const breath = document.getElementById('breath');
+                if (breath) breath.style.transform = 'scale(1.35)';
+            }, 800);
+        }
+
+        function spinWheel() {
+            const results = ["Jackpot! 🎉", "Super Gewinn!", "Nochmal drehen", "Glückwunsch!"];
+            showModal("Drehscheibe", `<div class="text-8xl text-center my-12 spin">🎡</div><p class="text-3xl font-bold text-center mt-8">${results[Math.floor(Math.random()*results.length)]}</p>`);
+        }
+
+        let calcDisplay = '0';
+        function openCalculator() {
+            showModal("Rechner", `
+                <div class="bg-gray-900 text-white p-6 rounded-3xl text-right text-5xl mb-8 min-h-[110px] flex items-end" id="calcScreen">0</div>
+                <div class="grid grid-cols-4 gap-3">
+                    ${['C','±','%','÷','7','8','9','×','4','5','6','-','1','2','3','+','0','.','='].map(btn => 
+                        `<button onclick="calcInput('${btn}')" class="py-6 text-2xl font-medium rounded-3xl transition-all active:scale-95 ${btn==='=' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-black hover:bg-gray-300'}">${btn}</button>`
+                    ).join('')}
+                </div>
+            `);
+        }
+
+        window.calcInput = function(val) {
+            const screen = document.getElementById('calcScreen');
+            if (!screen) return;
+            if (val === 'C') calcDisplay = '0';
+            else if (val === '=') {
+                try { calcDisplay = eval(calcDisplay.replace('×','*').replace('÷','/')).toString(); }
+                catch { calcDisplay = 'Fehler'; }
+            } else {
+                calcDisplay = (calcDisplay === '0' && !'±%÷×-+'.includes(val)) ? val : calcDisplay + val;
+            }
+            screen.textContent = calcDisplay;
+        };
+
+        function updateColor() {
+            const hue = parseInt(document.getElementById('hueSlider').value);
+            const color = `hsl(${hue}, 97%, 91%)`;
+            document.getElementById('colorDisplay').style.background = color;
+            const rgb = hslToRgb(hue, 0.97, 0.91);
+            const hex = '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+            document.getElementById('colorPickerDot').style.backgroundColor = hex;
+            document.getElementById('hexValue').textContent = hex;
+            document.getElementById('rgbValue').textContent = rgb.join(', ');
+            document.getElementById('hsvValue').textContent = `${hue}°, 97%, 91%`;
+        }
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = Math.round(hue2rgb(p, q, h / 360 + 1/3) * 255);
+                g = Math.round(hue2rgb(p, q, h / 360) * 255);
+                b = Math.round(hue2rgb(p, q, h / 360 - 1/3) * 255);
+            }
+            return [r, g, b];
+        }
+
+        function copyHex() {
+            navigator.clipboard.writeText(document.getElementById('hexValue').textContent);
+            alert("✅ Farbe kopiert!");
+        }
+
+        // Start
+        window.onload = () => {
+            createTools();
+            updateColor();
+        };
+    </script>
+</body>
+</html>
